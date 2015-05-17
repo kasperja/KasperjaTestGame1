@@ -20,6 +20,9 @@
 
         createjs.Ticker.setFPS(60);
         createjs.Ticker.addEventListener("tick", stage);
+        
+        loadsound();
+        
       }
 	  
     </script>
@@ -31,7 +34,7 @@
         //createjs.Sound.registerSound("assets/Powerup.mp3", soundID);
         createjs.Sound.registerSound("https://raw.githubusercontent.com/kasperja/KasperjaTestGame1/gh-pages/assets/Powerup.mp3", soundID);
       }
-	loadSound(soundID);
+      
       function playSound () {
         createjs.Sound.play(soundID);
       }
@@ -41,6 +44,7 @@
   </head>
   <body onload="init();">
   hej
+  
 	<canvas id="demoCanvas" width="500" height="200"></canvas>
 	<button onclick="playSound();" class="playSound">Play Sound</button>
     
