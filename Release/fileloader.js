@@ -30,8 +30,8 @@ Module.expectedDataFileDownloads++;
                               Module['locateFile'](REMOTE_PACKAGE_BASE) :
                               ((Module['filePackagePrefixURL'] || '') + REMOTE_PACKAGE_BASE);
   
-      var REMOTE_PACKAGE_SIZE = 4179513;
-      var PACKAGE_UUID = '847dd009-1ada-444a-b71a-7c4da973aa2e';
+      var REMOTE_PACKAGE_SIZE = 5168230;
+      var PACKAGE_UUID = 'c792cb23-c742-4e54-8078-b04bcc6a1233';
     
     function fetchRemotePackage(packageName, packageSize, callback, errback) {
       var xhr = new XMLHttpRequest();
@@ -132,12 +132,13 @@ Module['FS_createPath']('/', 'Resources', true, true);
       },
     };
 
-      new DataRequest(0, 31368, 0, 0).open('GET', '/mainData');
-    new DataRequest(31368, 31389, 0, 0).open('GET', '/methods_pointedto_by_uievents.xml');
-    new DataRequest(31389, 280337, 0, 0).open('GET', '/sharedassets0.assets');
-    new DataRequest(280337, 1788357, 0, 0).open('GET', '/Il2CppData/Metadata/global-metadata.dat');
-    new DataRequest(1788357, 3675781, 0, 0).open('GET', '/Resources/unity_default_resources');
-    new DataRequest(3675781, 4179513, 0, 0).open('GET', '/Resources/unity_builtin_extra');
+      new DataRequest(0, 144652, 0, 0).open('GET', '/mainData');
+    new DataRequest(144652, 144673, 0, 0).open('GET', '/methods_pointedto_by_uievents.xml');
+    new DataRequest(144673, 1190949, 0, 0).open('GET', '/sharedassets0.assets');
+    new DataRequest(1190949, 1194114, 0, 0).open('GET', '/sharedassets0.resource');
+    new DataRequest(1194114, 2777074, 0, 0).open('GET', '/Il2CppData/Metadata/global-metadata.dat');
+    new DataRequest(2777074, 4664498, 0, 0).open('GET', '/Resources/unity_default_resources');
+    new DataRequest(4664498, 5168230, 0, 0).open('GET', '/Resources/unity_builtin_extra');
 
     function processPackageData(arrayBuffer) {
       Module.finishedDataFileDownloads++;
@@ -150,6 +151,7 @@ Module['FS_createPath']('/', 'Resources', true, true);
           DataRequest.prototype.requests["/mainData"].onload();
           DataRequest.prototype.requests["/methods_pointedto_by_uievents.xml"].onload();
           DataRequest.prototype.requests["/sharedassets0.assets"].onload();
+          DataRequest.prototype.requests["/sharedassets0.resource"].onload();
           DataRequest.prototype.requests["/Il2CppData/Metadata/global-metadata.dat"].onload();
           DataRequest.prototype.requests["/Resources/unity_default_resources"].onload();
           DataRequest.prototype.requests["/Resources/unity_builtin_extra"].onload();
