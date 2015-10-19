@@ -30,8 +30,8 @@ Module.expectedDataFileDownloads++;
                               Module['locateFile'](REMOTE_PACKAGE_BASE) :
                               ((Module['filePackagePrefixURL'] || '') + REMOTE_PACKAGE_BASE);
   
-      var REMOTE_PACKAGE_SIZE = 4230190;
-      var PACKAGE_UUID = '1387e08e-adff-443e-837f-41ab83160707';
+      var REMOTE_PACKAGE_SIZE = 4382094;
+      var PACKAGE_UUID = '90310a02-14bc-4e14-a761-5cc9c34ec861';
     
     function fetchRemotePackage(packageName, packageSize, callback, errback) {
       var xhr = new XMLHttpRequest();
@@ -78,16 +78,6 @@ Module.expectedDataFileDownloads++;
       console.error('package error:', error);
     };
   
-      var fetched = null, fetchedCallback = null;
-      fetchRemotePackage(REMOTE_PACKAGE_NAME, REMOTE_PACKAGE_SIZE, function(data) {
-        if (fetchedCallback) {
-          fetchedCallback(data);
-          fetchedCallback = null;
-        } else {
-          fetched = data;
-        }
-      }, handleError);
-    
   function runWithFS() {
 
     function assert(check, msg) {
@@ -136,10 +126,98 @@ Module['FS_createPath']('/', 'Resources', true, true);
     new DataRequest(62288, 62309, 0, 0).open('GET', '/methods_pointedto_by_uievents.xml');
     new DataRequest(62309, 252617, 0, 0).open('GET', '/sharedassets0.assets');
     new DataRequest(252617, 255782, 0, 0).open('GET', '/sharedassets0.resource');
-    new DataRequest(255782, 1839034, 0, 0).open('GET', '/Il2CppData/Metadata/global-metadata.dat');
-    new DataRequest(1839034, 3726458, 0, 0).open('GET', '/Resources/unity_default_resources');
-    new DataRequest(3726458, 4230190, 0, 0).open('GET', '/Resources/unity_builtin_extra');
+    new DataRequest(255782, 1990938, 0, 0).open('GET', '/Il2CppData/Metadata/global-metadata.dat');
+    new DataRequest(1990938, 3878362, 0, 0).open('GET', '/Resources/unity_default_resources');
+    new DataRequest(3878362, 4382094, 0, 0).open('GET', '/Resources/unity_builtin_extra');
 
+      var indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB;
+      var IDB_RO = "readonly";
+      var IDB_RW = "readwrite";
+      var DB_NAME = 'EM_PRELOAD_CACHE';
+      var DB_VERSION = 1;
+      var METADATA_STORE_NAME = 'METADATA';
+      var PACKAGE_STORE_NAME = 'PACKAGES';
+      function openDatabase(callback, errback) {
+        try {
+          var openRequest = indexedDB.open(DB_NAME, DB_VERSION);
+        } catch (e) {
+          return errback(e);
+        }
+        openRequest.onupgradeneeded = function(event) {
+          var db = event.target.result;
+
+          if(db.objectStoreNames.contains(PACKAGE_STORE_NAME)) {
+            db.deleteObjectStore(PACKAGE_STORE_NAME);
+          }
+          var packages = db.createObjectStore(PACKAGE_STORE_NAME);
+
+          if(db.objectStoreNames.contains(METADATA_STORE_NAME)) {
+            db.deleteObjectStore(METADATA_STORE_NAME);
+          }
+          var metadata = db.createObjectStore(METADATA_STORE_NAME);
+        };
+        openRequest.onsuccess = function(event) {
+          var db = event.target.result;
+          callback(db);
+        };
+        openRequest.onerror = function(error) {
+          errback(error);
+        };
+      };
+
+      /* Check if there's a cached package, and if so whether it's the latest available */
+      function checkCachedPackage(db, packageName, callback, errback) {
+        var transaction = db.transaction([METADATA_STORE_NAME], IDB_RO);
+        var metadata = transaction.objectStore(METADATA_STORE_NAME);
+
+        var getRequest = metadata.get(packageName);
+        getRequest.onsuccess = function(event) {
+          var result = event.target.result;
+          if (!result) {
+            return callback(false);
+          } else {
+            return callback(PACKAGE_UUID === result.uuid);
+          }
+        };
+        getRequest.onerror = function(error) {
+          errback(error);
+        };
+      };
+
+      function fetchCachedPackage(db, packageName, callback, errback) {
+        var transaction = db.transaction([PACKAGE_STORE_NAME], IDB_RO);
+        var packages = transaction.objectStore(PACKAGE_STORE_NAME);
+
+        var getRequest = packages.get(packageName);
+        getRequest.onsuccess = function(event) {
+          var result = event.target.result;
+          callback(result);
+        };
+        getRequest.onerror = function(error) {
+          errback(error);
+        };
+      };
+
+      function cacheRemotePackage(db, packageName, packageData, packageMeta, callback, errback) {
+        var transaction = db.transaction([PACKAGE_STORE_NAME, METADATA_STORE_NAME], IDB_RW);
+        var packages = transaction.objectStore(PACKAGE_STORE_NAME);
+        var metadata = transaction.objectStore(METADATA_STORE_NAME);
+
+        var putPackageRequest = packages.put(packageData, packageName);
+        putPackageRequest.onsuccess = function(event) {
+          var putMetadataRequest = metadata.put(packageMeta, packageName);
+          putMetadataRequest.onsuccess = function(event) {
+            callback(packageData);
+          };
+          putMetadataRequest.onerror = function(error) {
+            errback(error);
+          };
+        };
+        putPackageRequest.onerror = function(error) {
+          errback(error);
+        };
+      };
+    
     function processPackageData(arrayBuffer) {
       Module.finishedDataFileDownloads++;
       assert(arrayBuffer, 'Loading data file failed.');
@@ -162,13 +240,38 @@ Module['FS_createPath']('/', 'Resources', true, true);
   
     if (!Module.preloadResults) Module.preloadResults = {};
   
-      Module.preloadResults[PACKAGE_NAME] = {fromCache: false};
-      if (fetched) {
-        processPackageData(fetched);
-        fetched = null;
-      } else {
-        fetchedCallback = processPackageData;
-      }
+      function preloadFallback(error) {
+        console.error(error);
+        console.error('falling back to default preload behavior');
+        fetchRemotePackage(REMOTE_PACKAGE_NAME, REMOTE_PACKAGE_SIZE, processPackageData, handleError);
+      };
+
+      openDatabase(
+        function(db) {
+          checkCachedPackage(db, PACKAGE_PATH + PACKAGE_NAME,
+            function(useCached) {
+              Module.preloadResults[PACKAGE_NAME] = {fromCache: useCached};
+              if (useCached) {
+                console.info('loading ' + PACKAGE_NAME + ' from cache');
+                fetchCachedPackage(db, PACKAGE_PATH + PACKAGE_NAME, processPackageData, preloadFallback);
+              } else {
+                console.info('loading ' + PACKAGE_NAME + ' from remote');
+                fetchRemotePackage(REMOTE_PACKAGE_NAME, REMOTE_PACKAGE_SIZE, 
+                  function(packageData) {
+                    cacheRemotePackage(db, PACKAGE_PATH + PACKAGE_NAME, packageData, {uuid:PACKAGE_UUID}, processPackageData,
+                      function(error) {
+                        console.error(error);
+                        processPackageData(packageData);
+                      });
+                  }
+                , preloadFallback);
+              }
+            }
+          , preloadFallback);
+        }
+      , preloadFallback);
+
+      if (Module['setStatus']) Module['setStatus']('Downloading...');
     
   }
   if (Module['calledRun']) {
